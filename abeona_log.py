@@ -125,27 +125,33 @@ def analyze_trends(df: pd.DataFrame) -> dict:
 
 def generate_neuroflex_wordcloud(word_freq: dict, mask_image_path: str = "neuroflex_mask.png") -> io.BytesIO:
     """
-    Генерирует облако слов в форме изображения (маска) и возвращает изображение в виде буфера.
+    Генерирует облако слов, заполняющее всё, кроме области маски.
+    Область, определенная маской, останется пустой, а слова будут размещаться на фоне.
     
     :param word_freq: Словарь частот слов.
     :param mask_image_path: Путь к изображению-маске (например, с логотипом).
     :return: Буфер с изображением облака слов (PNG).
-    :raises Exception: Если не удалось загрузить изображение-маску.
+    :raises Exception: Если не удалось загрузить или инвертировать изображение-маску.
     """
     try:
-        mask = np.array(Image.open(mask_image_path))
+        # Загружаем изображение маски в градациях серого
+        mask_img = Image.open(mask_image_path).convert("L")
+        mask = np.array(mask_img)
+        # Инвертируем маску: область маски станет 0 (без слов), остальное — 255 (с словами)
+        inverted_mask = 255 - mask
     except Exception as e:
-        raise Exception(f"Ошибка загрузки маски: {e}")
+        raise Exception(f"Ошибка загрузки или инвертирования маски: {e}")
     
+    # Создаем облако слов, используя инвертированную маску
     wordcloud = WordCloud(width=800, height=400, background_color="white",
-                          mask=mask, contour_width=3, contour_color='black')
+                          mask=inverted_mask, contour_width=3, contour_color='black')
     wordcloud.generate_from_frequencies(word_freq)
     
     buf = io.BytesIO()
     wordcloud.to_image().save(buf, format="PNG")
     buf.seek(0)
     return buf
-
+    
 # abeona_log.py
 
 import io
