@@ -1,8 +1,8 @@
 import datetime
 import logging
 from telegram.ext import ContextTypes
-from logger import log_poll_result
-from meeting import send_meeting_notification
+from bot.logger import log_poll_result
+from bot.meeting import send_meeting_notification
 
 logger = logging.getLogger(__name__)
 

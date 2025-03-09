@@ -159,7 +159,7 @@ import logging
 import configparser
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-from abeona_log import (
+from bot.abeona_log import (
     fetch_github_repos,
     analyze_github_stats,
     generate_github_bar_chart,

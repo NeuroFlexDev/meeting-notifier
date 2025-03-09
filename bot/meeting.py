@@ -3,7 +3,7 @@ import datetime
 import logging
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes, ConversationHandler
-from logger import log_meeting
+from bot.logger import log_meeting
 
 logger = logging.getLogger(__name__)
 
