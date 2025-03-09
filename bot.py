@@ -9,6 +9,7 @@ from collections import Counter
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
+import asyncio
 
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
@@ -56,10 +57,22 @@ from abeona_log import (
 # Импорт функции отправки статистики, если она есть
 from app import send_stats_to_telegram
 
-# Импорт cohere и инициализация клиента
-import cohere
-COHERE_API_KEY = "0abiLXNoDdCyXTRLNhtwnYPsgRpoiwpmHUyZiy67  "  # Замените на свой ключ
-co = cohere.ClientV2(COHERE_API_KEY)
+# ----------------- Инициализация клиента HuggingChat -----------------
+from hugchat import hugchat
+from hugchat.login import Login
+
+# Получаем данные из переменных окружения
+HUGGING_EMAIL = os.environ.get("HUGGING_EMAIL")
+HUGGING_PASSWD = os.environ.get("HUGGING_PASSWD")
+cookie_path_dir = "./cookies/"  # Обязательно оставьте завершающий слеш (/)
+
+if not HUGGING_EMAIL or not HUGGING_PASSWD:
+    raise ValueError("Не заданы переменные окружения HUGGING_EMAIL и/или HUGGING_PASSWD.")
+    
+# Логинимся и создаём клиента
+sign = Login(HUGGING_EMAIL, HUGGING_PASSWD)
+cookies = sign.login(cookie_dir_path=cookie_path_dir, save_cookies=True)
+chatbot = hugchat.ChatBot(cookies=cookies.get_dict())
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -67,20 +80,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ----------------- Функции для генерации сообщений с помощью Cohere -----------------
+# ----------------- Функции для генерации сообщений с помощью HuggingChat -----------------
 
 async def generate_and_send_message(context: ContextTypes.DEFAULT_TYPE, prompt: str, caption: str = "") -> None:
     """
-    Генерирует сообщение через Cohere и отправляет его во все чаты из bot_data["chat_ids"].
+    Генерирует сообщение через HuggingChat и отправляет его во все чаты из bot_data["chat_ids"].
     """
     try:
-        response = co.chat(
-            model="command-r-plus", 
-            messages=[{"role": "user", "content": prompt}]
-        )
-        generated_text = response.generations[0].text.strip()
+        # Запускаем синхронный вызов hugging-chat-api в отдельном потоке
+        response = await asyncio.to_thread(chatbot.chat, prompt)
+        generated_text = response.wait_until_done().strip()
     except Exception as e:
-        logger.error(f"Ошибка при вызове Cohere: {e}")
+        logger.error(f"Ошибка при вызове hugging-chat-api: {e}")
         generated_text = f"Ошибка генерации текста: {e}"
 
     chat_ids = context.application.bot_data.get("chat_ids", [])
